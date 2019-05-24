@@ -1,0 +1,117 @@
+Reproducible Research: Course Project 1
+=======================================
+
+This particular course project pertains to data that was collected from an individual using a personal activity monitoring device. The following bullets are the requirements for submission:
+
+
+* Code for reading in the dataset and/or processing the data
+* Histogram of the total number of steps taken each day
+* Mean and median number of steps taken each day
+* Time series plot of the average number of steps taken
+* The 5-minute interval that, on average, contains the maximum number of steps
+* Code to describe and show a strategy for imputing missing data
+* Histogram of the total number of steps taken each day after missing values are imputed
+* Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+* All of the R code needed to reproduce the results (numbers, plots, etc.) in the report
+
+
+###Read in the dataset and process the data.
+
+```{r}
+activity <- read.csv("activity.csv", stringsAsFactors = FALSE)
+activity$date <- as.Date(activity$date)
+summary(activity)
+```
+
+
+###Combine the total steps for each day and create a histogram.
+
+```{r}
+activitysum <- aggregate(steps ~ date, activity, sum)
+hist(activitysum$steps, xlab= "Steps", main = "The Total Number of Steps Taken per Day")
+```
+
+
+###Calculate the mean and median number of steps taken each day.
+
+```{r}
+mean(activitysum$steps)
+median(activitysum$steps)
+```
+
+
+###Create a time series plot of the average number of steps taken. 
+
+```{r}
+library(ggplot2)
+
+#Calculate the average number of steps by interval first.
+activityavg <- aggregate(steps ~ interval, activity, mean)
+
+avgsteps <- ggplot(activityavg, aes(interval, steps, colour=steps)) + geom_line() + scale_x_continuous(breaks = seq(0, 2500, by = 200))
+avgsteps + labs(title = "Average Amount of Steps Taken per 5-Minute Inverval Daily", x="Interval", y="Number of Steps")
+```
+
+###Maximum Number of Steps
+
+Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+
+```{r}
+activityavg[match(max(activityavg$steps),activityavg$steps),1]
+```
+
+
+###Strategy for imputing missing data.
+
+```{r}
+#Calculate the total number of missing values in the dataset (total number of NAs)
+sum(is.na(activity))
+
+#Use the mean values from each five minute intervals
+activity$newsteps <- ifelse(is.na(activity$steps)==T, activityavg[match(activity$interval, activityavg$interval),2], activity$steps)
+
+#Combine the total steps for each day.
+navaluessum <- aggregate(newsteps ~ date, activity, sum)
+
+#Plot a histogram of the total number of steps taken each day.
+hist(navaluessum$newsteps, xlab= "Steps", main = "The Total No of Steps Taken per Day (Missing Values Inc")
+```
+
+
+###Calculate and report the mean and median total number of steps taken per day. 
+
+```{r}
+#Do these values differ from the estimates from the first part of the assignment? 
+#1st Time
+mean(activitysum$steps)
+median(activitysum$steps)
+
+#2nd Time (with NA values included)
+mean(navaluessum$newsteps)
+median(navaluessum$newsteps)
+```
+
+###Compare the average number of steps taken per 5-minute interval across weekdays and weekends.
+
+```{r}
+
+#Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+weekdays1 <- c('Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday')
+activity$weekdayandend <- factor((weekdays(activity$date) %in% weekdays1), levels=c(FALSE, TRUE), labels=c('weekend', 'weekday'))
+
+#Combine only the three columns that are needed to answer this question.
+wkdaywkend <- cbind.data.frame(activity[,3], activity[,4], activity[,5])
+colnames(wkdaywkend) <- c("Interval", "Steps", "Day")
+```
+
+###Are there differences in activity patterns between weekdays and weekends?
+
+```{r}
+
+#Make a panel plot containing a time series plot to compare the differences between weekdays and weekends.
+ggplot(wkdaywkend, aes(x=Interval, y=Steps, color= Day)) + geom_line() + labs(title = "Weekdays vs. Weekends", x="Interval", y="Number of Steps") +facet_wrap(~`Day`, ncol =1, nrow = 2)
+```
+
+
+
+
